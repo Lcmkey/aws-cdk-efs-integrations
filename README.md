@@ -14,7 +14,13 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
  * `cdk synth`       emits the synthesized CloudFormation template
 
 
-# [Amazon EFS Integrations][amazon-efs-integrations]
+# Amazon EFS Integrations
+
+Reference
+
+1. [Amazon EFS Integrations][amazon-efs-integrations]
+
+2. [AWS Fargate with EFS][AWS Fargate with EFS]
 
 ### How to Run
 
@@ -147,3 +153,4 @@ If you're looking the example of the EFS file system policy mentioned in the dem
 <!-- Reference -->
 
 [amazon-efs-integrations]: https://github.com/aws-samples/amazon-efs-integrations
+[AWS Fargate with EFS]: https://caj.ms/writing/aws-fargate-with-efs

@@ -1,11 +1,12 @@
 import { Construct, Stack, StackProps, RemovalPolicy } from "@aws-cdk/core";
 import { InstanceClass, InstanceSize, InstanceType, Port, SecurityGroup, Vpc } from "@aws-cdk/aws-ec2";
-import { Cluster } from "@aws-cdk/aws-ecs";
-import { FileSystem } from "@aws-cdk/aws-efs";
+import { Cluster, LogDriver, AwsLogDriver } from "@aws-cdk/aws-ecs";
+import { FileSystem, LifecyclePolicy, PerformanceMode, ThroughputMode } from "@aws-cdk/aws-efs";
 import {
   ApplicationLoadBalancedFargateService,
   ApplicationLoadBalancedEc2Service,
 } from "@aws-cdk/aws-ecs-patterns";
+import { LogGroup, RetentionDays } from "@aws-cdk/aws-logs";
 
 import { EfsAccessPoints } from './efs-integrations/efs-access-points';
 import { EfsFileSystemPolicy } from './efs-integrations/efs-filesystem-policy';
@@ -86,6 +87,9 @@ export class AwsCdkEfsIntegrationsStack extends Stack {
         encrypted: true,
         securityGroup: efsSecurityGroup,
         vpc,
+        // lifecyclePolicy: LifecyclePolicy.AFTER_14_DAYS,
+        // performanceMode: PerformanceMode.GENERAL_PURPOSE,
+        // throughputMode: ThroughputMode.BURSTING,
         removalPolicy: RemovalPolicy.DESTROY // not recommand to enable in production env
       });
 
@@ -132,7 +136,12 @@ export class AwsCdkEfsIntegrationsStack extends Stack {
           efsAccessPoints
         ) as ApplicationLoadBalancedEc2Service;
 
+        /**
+         * eed to add permissions to and from the file system to the target,
+         * or else the task will timeout trying to mount the file system.
+         */
         efsSecurityGroup.connections.allowFrom(ecsOnEc2Service.service, Port.tcp(2049));
+        // efsSecurityGroup.connections.allowTo(ecsOnEc2Service.service, Port.tcp(2049));
       }
 
       /**
@@ -148,7 +157,12 @@ export class AwsCdkEfsIntegrationsStack extends Stack {
           efsAccessPoints
         ) as ApplicationLoadBalancedFargateService;
 
+        /**
+         * eed to add permissions to and from the file system to the target,
+         * or else the task will timeout trying to mount the file system.
+         */
         efsSecurityGroup.connections.allowFrom(ecsOnFargateService.service, Port.tcp(2049));
+        // efsSecurityGroup.connections.allowTo(ecsOnFargateService.service, Port.tcp(2049));
       }
 
       if (createEfsAccessPoints && fileSystem && efsAccessPoints) {

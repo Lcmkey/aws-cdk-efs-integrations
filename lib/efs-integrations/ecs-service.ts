@@ -7,6 +7,7 @@ import {
     NetworkMode,
     Protocol,
     LogDriver,
+    AwsLogDriver,
 } from "@aws-cdk/aws-ecs";
 import { FileSystem } from "@aws-cdk/aws-efs";
 import { Duration } from "@aws-cdk/core";
@@ -108,6 +109,16 @@ export class EcsEfsIntegrationService {
                 },
             );
         } else {
+            // const vpc = Vpc.fromLookup(...);
+            // const cluster = Cluster.fromClusterAttributes(...);
+            // const hostedZone = HostedZone.fromLookup(...);
+            // const certificateArn = cdk.Fn.importValue("...");
+            // const certificate = Certificate.fromCertificateArn(
+            //   this,
+            //   "Certificate",
+            //   certificateArn
+            // );
+
             /**
              * Fagate Load Balancer Service Definition
              */
@@ -117,11 +128,18 @@ export class EcsEfsIntegrationService {
                 {
                     serviceName: `${prefix}-${stage}-Fargate-Service`,
                     cluster,
+                    // certificate,
                     desiredCount: 2,
-                    platformVersion: FargatePlatformVersion.VERSION1_4,
+                    platformVersion: FargatePlatformVersion.VERSION1_4, // need platform version 1.4.0 to mount EFS volumes
+                    // publicLoadBalancer: true,
+                    // domainName: "",
+                    // domainZone: hostedZone,
                     taskImageOptions: {
                         containerName: "cloudcmd",
                         image: ContainerImage.fromRegistry(containerImage),
+                        logDriver: new AwsLogDriver({
+                            streamPrefix: `ecs-fargate-log`,
+                        }),
                     },
                     ...props,
                 },
@@ -252,13 +270,13 @@ export class EcsEfsIntegrationService {
           configurations, which is available in the AWS SDK.
         */
         const createOrUpdateCustomTaskDefinition = {
+            service: "ECS",
             action: "registerTaskDefinition",
             outputPath: "taskDefinition.taskDefinitionArn",
             parameters: customTaskDefinitionJson,
             physicalResourceId: PhysicalResourceId.fromResponse(
                 "taskDefinition.taskDefinitionArn",
             ),
-            service: "ECS",
         };
 
         const customTaskDefinition = new AwsCustomResource(
@@ -282,9 +300,11 @@ export class EcsEfsIntegrationService {
         );
 
         /*
-          Finally, we'll update the ECS service to use the new task definition revision
-          that we just created above.
-        */
+         * Finally, we'll update the ECS service to use the new task definition revision
+         * that we just created above.
+         * This will get around the current limitation of not being able to create
+         * ecs services with task definition arns.
+         */
         (service.service.node.tryFindChild(
             "Service",
         ) as CfnService)?.addPropertyOverride(
